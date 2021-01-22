@@ -1,0 +1,2 @@
+1.dolphindb table创建
+table_name=table([vector]...)

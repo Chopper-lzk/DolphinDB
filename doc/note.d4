@@ -1,0 +1,10 @@
+DolphinDB c++ api
+1.标量类型
+DolphinDB c++ api没有把实际的标量类型暴露给用户，可通过Constant类型提供的统一接口使用他们，并使用Util提供的工厂函数创建，例：
+ConstantSP val=Util::createInt(47);
+2.Vector
+vector是DolphinDB中的动态数组类型，可使用Util::createVector方法创建，例：
+VectorSP v=Util::createVector(DT_INT,0);
+3. c++ vector的emplace_back和push_back
+push_back()在向容器尾部添加元素，会先创建这个元素，在将这个元素拷贝到容器内部，事后该元素释放内存；
+emplace_back()则是直接在容器尾部创建这个元素，省去了拷贝过程，一般效率更高。

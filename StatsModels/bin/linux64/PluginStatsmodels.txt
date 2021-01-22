@@ -1,0 +1,4 @@
+statsmodels,libPluginStatsmodels.so
+adfuller,adfuller,system,1,3,0
+kpss,kpss,system,1,3,0
+

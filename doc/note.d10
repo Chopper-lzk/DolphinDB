@@ -1,0 +1,7 @@
+1.unix 环境变量配置
+若给所有用户配置，须修改/etc/bashrc
+若给当前用户配置，须修改~/.bashrc
+我们用vim打开，增加某个目录路径前缀到环境变量中：
+export PATH="path to directory:$PATH"
+使其生效：
+source ~/.bashrc

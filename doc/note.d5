@@ -1,0 +1,27 @@
+1.git 删除远程仓库文件夹
+git rm -r --cached xxx
+git commit -m "xxx"
+git push -u [name] [branch]
+2.cmake
+CMake是一种跨平台编译工具，比make更为高级，使用起来要方便得多。CMake主要是编写CMakeLists.txt文件，然后用cmake命令将CMakeLists.txt文件转化为make所需要的makefile文件，最后用make命令编译源码生成可执行程序或共享库（so(shared object)）。因此CMake的编译基本就两个步骤：
+  1. cmake
+  2. make
+例如：
+  mkdir build
+  cd build
+  cmake ..
+  make
+3.Markdown
+1）标题在想要设置为标题的文字前面加#来表示
+一个#是一级标题，二个#是二级标题，以此类推。支持六级标题。
+注：标准语法一般在#后跟个空格再写文字，貌似简书不加空格也行。
+示例：
+# 这是一级标题
+## 这是二级标题
+4.git
+1)将远程指定分支拉取到本地指定分支上：
+git pull origin <远程分支名>:<本地分支名>
+
+2)将本地某个分支推送到远程指定分支上：
+git pull origin <本地分支名>:<远程分支名>
+

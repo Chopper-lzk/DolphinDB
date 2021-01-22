@@ -1,0 +1,10 @@
+1.gcc版本切换（g++类似）
+1）安装指定版本gcc： sudo apt-get install gcc-x.x 例： sudo apt-get install g
+3）调整gcc优先级，切换版本：sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 100
+2.查看GLIBC
+strings /path/to/libstdc++.so.6 | grep GLIBC
+3.json文件
+将json string 保存为JSON文件：
+char* data="[json string]"
+cJSON* json= cJSON_Parse(data);
+char* json_data=cJSON_Print(json));

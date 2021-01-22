@@ -1,0 +1,4 @@
+1.静态库和动态库
+UNIX系统中，静态库名为libxxx.a，动态库名为libxxx.so
+2.CmakeLists.txt
+

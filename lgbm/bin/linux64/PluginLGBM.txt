@@ -1,0 +1,8 @@
+lgbm,libPluginLGBM.so
+modelTrain,modelTrain,system,4,4,0
+modelPredict,modelPredict,system,2,2,0
+modelSave,modelSave,system,2,2,0
+modelLoad,modelLoad,system,1,1,0
+modelTrainKFold,modelTrainKFold,system,5,5,0
+fitGoodness,fitGoodness,system,2,2,0
+modelTrainDS,modelTrainDS,system,4,4,0

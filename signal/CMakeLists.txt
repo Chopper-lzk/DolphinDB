@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.10)
+project(signal)
+
+ADD_DEFINITIONS(-DLINUX)
+ADD_DEFINITIONS(-D_GLIBCXX_USE_CXX11_ABI=0)
+add_compile_options(-fPIC)
+FIND_PACKAGE(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+    set(CMAKE_C_FLAGS "${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
+set(CMAKE_CXX_STANDARD 11)
+set(SOURCE_FILES signal.cpp)
+
+set(INC_DIR ~/DolphinDB_Plugin/include)
+set(LINK_DIR ~/DolphinDB_Linux64_V1.20.8/server)
+
+include_directories(${PROJECT_SOURCE_DIR}/../include)
+link_directories("${CMAKE_BINARY_DIR}")
+link_directories(${LINK_DIR})
+aux_source_directory(${PROJECT_SOURCE_DIR}/src DIR_SRCS)
+add_library(PluginSignal SHARED ${DIR_SRCS})
+target_link_libraries(PluginSignal DolphinDB)
+

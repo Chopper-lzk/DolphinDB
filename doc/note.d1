@@ -1,0 +1,10 @@
+section1. some function
+1) take(x,y) 
+k为整数，x可以是标量或者向量，若x为标量，则生成k个x，若为向量，则依次循环取k个值。
+2) sort(x,[ascending=true])
+排序，默认为升序，sort!()是sort()的原地版本。
+3) norm(mean, std, count)
+产生一个正态分布，mean为均值，std为方差，count为向量长度。
+4) join(x,y)
+將x，y合并。
+
