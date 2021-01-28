@@ -1,6 +1,7 @@
 # DolphinDB Signal Plugin
 
 DolphinDB的signal插件对四个基础的信号处理函数（离散正弦变换、离散余弦变换、离散小波变换、反离散小波变换）进行了封装。用户可以在DolphinDB数据库软件中加载该插件以使用这四个函数进行信号处理。
+新增离散余弦变换的分布式版本。
 
 ## 构建
 
@@ -82,6 +83,21 @@ signal::idwt(X,Y)
 
 返回逆变换得到的信号序列。
 
+## 1. signal::dctParallel
+离散余弦变换的分布式版本，对离散信号作离散余弦变换，返回变换序列
+### 语法
+
+```
+signal::dct(ds)
+```
+
+### 参数
+- ds: 输入的数据源元组，包含若干个分区，分布在若干个控制节点中。
+
+### 返回值
+
+返回变换后的序列向量，与输入向量等长，元素类型为double。
+
 # 示例
 
 ## 例1 dct离散余弦变换
@@ -142,5 +158,19 @@ Y = [-0.707106781186548,-0.707106781186548]
 ```
 > signal::dwt(x,y)
 [1,2,3.000000000000001,4.000000000000001]
+```
+## 例5 dctParallel离散余弦变换分布式版本
+```
+f1=0..9999
+f2=1..10000
+t=table(f1,f2)
+db = database("dfs://rangedb_data", RANGE, 0 5000 10000)
+signaldata = db.createPartitionedTable(t, "signaldata", "f1")
+signaldata.append!(t)
+signaldata=loadTable(db,"signaldata")
+ds=sqlDS(<select * from signaldata >)
+loadPlugin("/path/to/PluginSignal.txt")
+use signal
+signal::dctParallel(ds);
 ```
 

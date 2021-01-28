@@ -1,5 +1,10 @@
-signal,libPluginSignal.so
+signal,libPluginsignal.so
 dct,dct,operator,1,1,0
 dst,dst,operator,1,1,0
 dwt,dwt,operator,1,1,0
 idwt,idwt,operator,2,2,0
+dctMap,dctMap,system,2,2,0
+dctNumMap,dctNumMap,system,1,1,0
+dctReduce,dctReduce,operator,2,2,0
+dctNumReduce,dctNumReduce,operator,2,2,0
+dctParallel,dctParallel,system,1,1,0

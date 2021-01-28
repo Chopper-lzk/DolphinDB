@@ -12,19 +12,33 @@
 #include <vector>
 #include <string>
 #include <omp.h>
+#include <ScalarImp.h>
 
 #define PI 3.1415926
+#define  DOLPHIN_NULL -1.7976931348623157e+308
 static void dwt_get(int,int,vector<double>& ,vector<double>&, vector<double>&);
 static void idwt_get(int,int,vector<double>& ,vector<double>&, vector<double>&,omp_lock_t&);
+static bool checkNull(vector<double>&);
 
+static bool checkNull(vector<double>& x){
+    for(int idx=0;idx<x.size();idx++){
+        if(x[idx]==DOLPHIN_NULL)
+            return false;
+    }
+    return true;
+}
 //离散余弦变换(DCT-II)
 ConstantSP dct(const ConstantSP& a, const ConstantSP& b){
-    if(!(a->isVector()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
-        throw IllegalArgumentException("dct", "The argument should be a nonempty integrial or floating vector.");
+    string funName="dct";
+    string syntax="Usage: "+funName+"(x)";
+    if(!(a->isArray()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
+        throw IllegalArgumentException("dct", "The argument should be a nonempty integrial or floating one dimension vector.");
     int size=a->size();
     vector<double> xn(size,0);    //存储输入的离散信号序列x(n)
     vector<double> xk(size,0);    //存储计算出的离散余弦变换序列X(k)
     a->getDouble(0,size,&xn[0]);
+    if(!checkNull(xn))
+        throw IllegalArgumentException(funName,syntax+" Invalid input, check NULL contained.");
 #pragma omp parallel for schedule(static) num_threads(omp_get_num_procs())
     for(int k=0;k<size;k++){
         double data=0;
@@ -45,15 +59,84 @@ ConstantSP dct(const ConstantSP& a, const ConstantSP& b){
     res->setDouble(0,size,&xk[0]);
     return res;
 }
+ConstantSP dctMap(Heap *heap, vector<ConstantSP> &args){
+    TableSP table=args[0];
+    int size=args[1]->getInt();
+    vector<double> xn(table->rows(),0);
+    vector<double> xk(size,0);
+    vector<int> index_j(table->rows(),0);
+    table->getColumn(0)->getInt(0,table->rows(),&index_j[0]);
+    table->getColumn(1)->getDouble(0,table->rows(),&xn[0]);
+    omp_lock_t lock;
+    omp_init_lock(&lock);
+#pragma omp parallel for schedule(static) num_threads(omp_get_num_procs())
+    for(int idx=0;idx<index_j.size();idx++) {
+        for (int k = 0; k < size; k++) {
+            double ak = k == 0 ? sqrt(1.0 / size) : sqrt(2.0 / size);
+            omp_set_lock(&lock);
+            xk[k] += xn[idx] * cos(PI * k * (2 * index_j[idx] + 1) / (2 * size)) * ak;
+            omp_unset_lock(&lock);
+        }
+    }
+    ConstantSP result=Util::createVector(DT_DOUBLE,size);
+    result->setDouble(0,size,&xk[0]);
+    return result;
+}
+ConstantSP dctNumMap(Heap *heap, vector<ConstantSP> &args){
+    TableSP t=args[0];
+    int size=t->rows();
+    ConstantSP res=Util::createConstant(DT_INT);
+    res->setInt(size);
+    return res;
+}
+ConstantSP dctReduce(const ConstantSP &mapRes1, const ConstantSP &mapRes2){
+    vector<double> xk_1(mapRes1->size(),0);
+    vector<double> xk_2(mapRes2->size(),0);
+    mapRes1->getDouble(0,mapRes1->size(),&xk_1[0]);
+    mapRes2->getDouble(0,mapRes2->size(),&xk_2[0]);
+#pragma omp parallel for schedule(static) num_threads(omp_get_num_procs())
+    for(int i=0;i<xk_1.size();i++)
+        xk_1[i]+=xk_2[i];
+    ConstantSP result=Util::createVector(DT_DOUBLE,xk_1.size());
+    result->setDouble(0,xk_1.size(),&xk_1[0]);
+    return result;
+}
+ConstantSP dctNumReduce(const ConstantSP &mapRes1, const ConstantSP &mapRes2){
+    int x1=mapRes1->getInt();
+    int x2=mapRes2->getInt();
+    int size=x1+x2;
+    ConstantSP res=Util::createConstant(DT_INT);
+    res->setInt(size);
+    return res;
+}
+ConstantSP dctParallel(Heap* heap,vector<ConstantSP>& args){
+    ConstantSP ds=args[0];
 
+    FunctionDefSP num_mapfunc=heap->currentSession()->getFunctionDef("signal::dctNumMap");
+    FunctionDefSP num_reducefunc=heap->currentSession()->getFunctionDef("signal::dctNumReduce");
+    FunctionDefSP mr=heap->currentSession()->getFunctionDef("mr");
+    vector<ConstantSP> num_myargs={ds,num_mapfunc,num_reducefunc};
+    ConstantSP size=mr->call(heap,num_myargs);
+
+    FunctionDefSP mapfunc=heap->currentSession()->getFunctionDef("signal::dctMap");
+    vector<ConstantSP> mapwithsizearg={new Void(),size};
+    FunctionDefSP mapwithsize=Util::createPartialFunction(mapfunc,mapwithsizearg);
+    FunctionDefSP reducefunc=heap->currentSession()->getFunctionDef("signal::dctReduce");
+    vector<ConstantSP> myargs={ds,mapwithsize,reducefunc};
+    return mr->call(heap,myargs);
+}
 //离散正弦变换(DST-I)
 ConstantSP dst(const ConstantSP& a, const ConstantSP& b){
-    if(!(a->isVector()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
-        throw IllegalArgumentException("dst", "The argument should be a nonempty integrial or floating vector.");
+    string funName="dst";
+    string syntax="Usage: "+funName+"(x)";
+    if(!(a->isArray()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
+        throw IllegalArgumentException("dst", "The argument should be a nonempty integrial or floating one dimension vector.");
     int size=a->size();
     vector<double> xn(size,0);     //存储输入的离散信号序列x(n)
     vector<double> xk(size,0);     //存储输出的离散正弦变换序列X(k)
     a->getDouble(0,size,&xn[0]);
+    if(!checkNull(xn))
+        throw IllegalArgumentException(funName,syntax+" Ivalid input, check NULL contained.");
 #pragma omp parallel for schedule(static) num_threads(omp_get_num_procs())
     for(int k=0;k<size;k++){
         double ak=2;
@@ -78,8 +161,10 @@ ConstantSP dst(const ConstantSP& a, const ConstantSP& b){
 
 //一维离散小波变换(DWT)
 ConstantSP dwt(const ConstantSP& a, const ConstantSP& b){
-    if(!(a->isVector()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
-        throw IllegalArgumentException("dwt", "The argument should be a nonempty integrial or floating vector.");
+    string funName="dwt";
+    string syntax="Usage: "+funName+"(x)";
+    if(!(a->isArray()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
+        throw IllegalArgumentException("dwt", "The argument should be a nonempty integrial or floating one dimension vector.");
     int dataLen=a->size();  //信号序列长度
     vector<double> FilterLD = {
             0.7071067811865475244008443621048490392848359376884740365883398,
@@ -95,6 +180,8 @@ ConstantSP dwt(const ConstantSP& a, const ConstantSP& b){
     vector<double> cA(decLen,0);
     vector<double> cD(decLen,0);
     a->getDouble(0,dataLen,&xn[0]);
+    if(!checkNull(xn))
+        throw IllegalArgumentException(funName,syntax+" Invalid input, check NULL contained.");
 #pragma omp sections
     {
       #pragma omp section
@@ -120,10 +207,12 @@ ConstantSP dwt(const ConstantSP& a, const ConstantSP& b){
 
 //一维离散小波逆变换(IDWT)
 ConstantSP idwt(const ConstantSP& a, const ConstantSP& b){
-    if(!(a->isVector()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
-        throw IllegalArgumentException("idwt", "The argument 1 should be a nonempty integrial or floating vector.");
-    if(!(b->isVector()&&a->isNumber()&&(b->getCategory()==INTEGRAL || b->getCategory()==FLOATING)&&a->size()>0))
-        throw IllegalArgumentException("idwt", "The argument 2 should be a nonempty integrial or floating vector.");
+    string funName="idwt";
+    string syntax="Usage: "+funName+"(ca,cd)";
+    if(!(a->isArray()&&a->isNumber()&&(a->getCategory()==INTEGRAL || a->getCategory()==FLOATING)&&a->size()>0))
+        throw IllegalArgumentException("idwt", "The argument 1 should be a nonempty integrial or floating one dimension vector.");
+    if(!(b->isArray()&&a->isNumber()&&(b->getCategory()==INTEGRAL || b->getCategory()==FLOATING)&&a->size()>0))
+        throw IllegalArgumentException("idwt", "The argument 2 should be a nonempty integrial or floating dimension vector.");
     if(a->size()!=b->size())
         throw IllegalArgumentException("idwt", "two arguments should have the same size.");
     vector<double> FilterLR = {
@@ -142,6 +231,8 @@ ConstantSP idwt(const ConstantSP& a, const ConstantSP& b){
     vector<double> recData(recLen,0);
     a->getDouble(0,dataLen,&cA[0]);
     b->getDouble(0,dataLen,&cD[0]);
+    if((!checkNull(cA))||(!checkNull(cD)))
+        throw IllegalArgumentException(funName,syntax+" Invalid input, check NULL contained.");
     omp_lock_t _lock;
     omp_init_lock(&_lock);
 #pragma omp sections
